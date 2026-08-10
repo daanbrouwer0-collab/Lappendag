@@ -419,6 +419,14 @@ body {
   max-width: 100%;
 }
 
+.current-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  max-width: 100%;
+}
+
 .now-playing-tag {
   font-size: 0.75rem;
   letter-spacing: 2px;
@@ -434,6 +442,17 @@ body {
   line-height: 1.1;
   color: #fff;
   text-shadow: 0 1px 10px rgba(0, 0, 0, 0.75);
+}
+
+.now-playing-list-btn {
+  width: 32px;
+  height: 32px;
+  font-size: 0.85rem;
+  background: rgba(8, 8, 12, 0.45);
+}
+
+.now-playing-list-btn[hidden] {
+  display: none;
 }
 
 .next-title {

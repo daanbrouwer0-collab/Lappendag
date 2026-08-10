@@ -79,7 +79,12 @@
         <div class="track-info">
           <div class="now-playing-art" id="nowPlayingArt" aria-hidden="true"></div>
           <div class="track-info-text">
-            <h2 class="current-title" id="currentTitle">Laden...</h2>
+            <div class="current-title-row">
+              <h2 class="current-title" id="currentTitle">Laden...</h2>
+              <button type="button" class="list-toggle-btn now-playing-list-btn" id="nowPlayingListBtn" title="Naar My list" aria-label="Naar My list" hidden>
+                <i class="fa-solid fa-plus" id="nowPlayingListIcon"></i>
+              </button>
+            </div>
             <p class="next-title" id="nextTitle" hidden></p>
           </div>
         </div>

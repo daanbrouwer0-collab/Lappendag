@@ -62,6 +62,8 @@ const durationEl = document.getElementById('duration');
 const currentTitle = document.getElementById('currentTitle');
 const nextTitle = document.getElementById('nextTitle');
 const nowPlayingArt = document.getElementById('nowPlayingArt');
+const nowPlayingListBtn = document.getElementById('nowPlayingListBtn');
+const nowPlayingListIcon = document.getElementById('nowPlayingListIcon');
 const playlistEl = document.getElementById('playlist');
 const coverArtCache = new Map(); // file url -> objectURL | null
 const disc = document.getElementById('disc');
@@ -391,6 +393,22 @@ function isInMyList(name) {
   return myListNames.some((n) => trackKey(n) === key);
 }
 
+function updateNowPlayingListBtn() {
+  if (!nowPlayingListBtn || !nowPlayingListIcon) return;
+  const track = tracks[currentIndex];
+  if (!track) {
+    nowPlayingListBtn.hidden = true;
+    return;
+  }
+
+  const inList = isInMyList(track.title);
+  nowPlayingListBtn.hidden = false;
+  nowPlayingListBtn.classList.toggle('in-list', inList);
+  nowPlayingListBtn.title = inList ? 'Uit My list' : 'Naar My list';
+  nowPlayingListBtn.setAttribute('aria-label', inList ? 'Uit My list' : 'Naar My list');
+  nowPlayingListIcon.className = `fa-solid ${inList ? 'fa-minus' : 'fa-plus'}`;
+}
+
 function toggleMyList(name) {
   const key = trackKey(name);
   if (isInMyList(name)) {
@@ -402,6 +420,7 @@ function toggleMyList(name) {
   plannedNextIndex = -1;
   renderPlaylist();
   updateNextTitle();
+  updateNowPlayingListBtn();
 }
 
 async function fileExists(url) {
@@ -540,6 +559,10 @@ async function initPlayer() {
   muteBtn.addEventListener('click', toggleMute);
   tabAll.addEventListener('click', () => setTab('all'));
   tabMyList.addEventListener('click', () => setTab('mylist'));
+  nowPlayingListBtn?.addEventListener('click', () => {
+    const track = tracks[currentIndex];
+    if (track) toggleMyList(track.title);
+  });
 
   [audioA, audioB].forEach((el) => {
     el.addEventListener('timeupdate', onAudioTimeUpdate);
@@ -573,6 +596,7 @@ async function initPlayer() {
     tracks = [];
     currentIndex = 0;
     currentTitle.textContent = 'Tracks laden...';
+    updateNowPlayingListBtn();
     if (audio.src) {
       audio.removeAttribute('src');
       audio.load();
@@ -596,6 +620,7 @@ async function initPlayer() {
 
   if (tracks.length === 0) {
     currentTitle.textContent = 'Geen tracks gevonden';
+    updateNowPlayingListBtn();
     playlistEl.innerHTML = '<p class="playlist-empty">Geen bestanden in Lap-set/ gevonden. Start een lokale server.</p>';
     const trackCountEl = document.getElementById('trackCount');
     if (trackCountEl) trackCountEl.textContent = '0';
@@ -1079,6 +1104,7 @@ function finishMix(nextIndex) {
   currentIndex = nextIndex;
   currentTitle.textContent = tracks[currentIndex].title;
   updateNowPlayingArt(tracks[currentIndex]);
+  updateNowPlayingListBtn();
   pendingMixIndex = -1;
   isMixing = false;
   isPlaying = true;
@@ -1250,6 +1276,7 @@ function loadTrack(index, shouldPlay = true) {
   }
   currentTitle.textContent = track.title;
   updateNowPlayingArt(track);
+  updateNowPlayingListBtn();
 
   setRangeAndFill(0);
   if (progressFillIncoming) progressFillIncoming.style.width = '0%';
