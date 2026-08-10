@@ -60,8 +60,11 @@
           // localStorage unavailable
         }
 
-        const base = `https://cdn.jsdelivr.net/gh/${repo}@${version}`;
+        // jsDelivr caches @main for up to a week — prefer commit SHA URLs.
+        let base = `https://cdn.jsdelivr.net/gh/${repo}@${version}`;
         let overlayHidden = false;
+        let shaReloadDone = false;
+        let currentPath = "index.html";
 
         function hideOverlay() {
           if (overlayHidden) return;
@@ -69,20 +72,48 @@
           if (loading) loading.hidden = true;
         }
 
-        function refreshShaCache() {
+        function setVersion(next) {
+          version = next;
+          base = `https://cdn.jsdelivr.net/gh/${repo}@${version}`;
+          try {
+            localStorage.setItem(SHA_KEY, next);
+          } catch (_) {
+            // ignore quota / private mode
+          }
+        }
+
+        function refreshShaAndMaybeReload() {
           fetch(`https://api.github.com/repos/${repo}/commits/main?per_page=1`)
             .then((res) => (res.ok ? res.json() : null))
             .then((data) => {
-              if (data && data.sha) {
+              if (!data || !data.sha) return;
+              if (data.sha === version) {
                 try {
                   localStorage.setItem(SHA_KEY, data.sha);
-                } catch (_) {
-                  // ignore quota / private mode
-                }
+                } catch (_) {}
+                return;
               }
+              // Pinned SHA avoids stale @main CDN cache; reload once with fresh commit.
+              if (shaReloadDone) {
+                try {
+                  localStorage.setItem(SHA_KEY, data.sha);
+                } catch (_) {}
+                return;
+              }
+              shaReloadDone = true;
+              if (loading) {
+                loading.hidden = false;
+                overlayHidden = false;
+              }
+              setVersion(data.sha);
+              show(currentPath).catch(() => {
+                hideOverlay();
+                document.body.innerHTML =
+                  '<p id="site-error">Kon de Lappendag-site niet laden vanaf GitHub.</p>';
+              });
             })
             .catch(() => {
-              // keep cached / main for next visit
+              // keep cached / main
             });
         }
 
@@ -136,7 +167,8 @@
         }
 
         async function show(path) {
-          const pagePath = normalizePath(path);
+          currentPath = normalizePath(path);
+          const pagePath = currentPath;
           const res = await fetch(`${base}/${pagePath}`);
           if (!res.ok) {
             throw new Error(`Pagina niet gevonden: ${pagePath}`);
@@ -160,7 +192,7 @@
           frame.srcdoc = html;
         }
 
-        refreshShaCache();
+        refreshShaAndMaybeReload();
 
         const initial = normalizePath(
           (location.hash || "#index.html").slice(1)
