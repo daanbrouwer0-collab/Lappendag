@@ -13,18 +13,40 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <!-- Ambient background glow effects -->
+  <div class="bg-photo" aria-hidden="true"></div>
+  <div class="bg-dim" aria-hidden="true"></div>
+  <!-- Ambient color wash over Haven.jpg -->
   <div class="ambient-glow glow-1"></div>
   <div class="ambient-glow glow-2"></div>
   <div class="ambient-glow glow-3"></div>
+  <div class="color-wash" aria-hidden="true"></div>
   <div class="grid-overlay"></div>
+
+  <div class="corner-stack">
+    <button type="button" class="location-btn" id="locationBtn" title="Locatie" aria-label="Toon locatie" aria-haspopup="dialog" aria-expanded="false">
+      <i class="fa-solid fa-location-dot"></i>
+    </button>
+    <div class="time-badge" title="18:00" aria-label="18:00">18:00</div>
+  </div>
+
+  <div class="location-modal" id="locationModal" hidden>
+    <div class="location-backdrop" id="locationBackdrop"></div>
+    <div class="location-dialog" role="dialog" aria-modal="true" aria-labelledby="locationTitle">
+      <div class="location-dialog-header">
+        <h2 id="locationTitle">Locatie</h2>
+        <button type="button" class="location-close" id="locationClose" aria-label="Sluiten">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <img class="location-map" src="locatie.png" alt="Kaart: Uit het water en uit je bol, Buitenhaven Hoorn">
+    </div>
+  </div>
 
   <div class="app-container">
     <!-- Header -->
     <header class="header">
-      <div class="badge"><i class="fa-solid fa-bolt"></i> RAVE ARCHIVE 2026</div>
       <h1 class="title">LAPPENDAG <span class="neon-text">AFTERPARTY</span></h1>
-      <p class="subtitle">Exclusieve DJ Sets & Audio Streams • Non-Stop Energy</p>
+      <p class="subtitle">Exclusieve DJ Sets & Unieke mixer • Non-Stop Energy</p>
     </header>
 
     <!-- Main Content Grid -->
@@ -41,21 +63,25 @@
           </div>
           <!-- Equalizer animation -->
           <div class="eq-bars" id="eqBars">
-            <div class="bar"></div>
-            <div class="bar"></div>
-            <div class="bar"></div>
-            <div class="bar"></div>
-            <div class="bar"></div>
-            <div class="bar"></div>
-            <div class="bar"></div>
-            <div class="bar"></div>
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
           </div>
         </div>
 
         <div class="track-info">
-          <span class="now-playing-tag">NU AAN HET AFSPELEN</span>
-          <h2 class="current-title" id="currentTitle">Selecteer een set...</h2>
-          <p class="current-artist" id="currentArtist">Lappendag Sound System</p>
+          <div class="now-playing-art" id="nowPlayingArt" aria-hidden="true"></div>
+          <div class="track-info-text">
+            <h2 class="current-title" id="currentTitle">Laden...</h2>
+            <p class="next-title" id="nextTitle" hidden></p>
+          </div>
         </div>
 
         <!-- Custom Scrubber Slider -->
@@ -64,9 +90,16 @@
             <span id="currentTime">00:00:00</span>
             <span id="duration">00:00:00</span>
           </div>
-          <div class="slider-wrapper">
+          <div class="slider-wrapper" id="sliderWrapper">
+            <div class="progress-stack">
+              <div class="progress-lane outgoing" id="outgoingLane">
+                <div class="progress-fill" id="progressFill"></div>
+              </div>
+              <div class="progress-lane incoming" id="incomingLane" hidden>
+                <div class="progress-fill incoming-fill" id="progressFillIncoming"></div>
+              </div>
+            </div>
             <input type="range" id="progressBar" min="0" max="100" value="0" step="0.1" aria-label="Audio scrubber slider">
-            <div class="progress-fill" id="progressFill"></div>
           </div>
         </div>
 
@@ -84,9 +117,31 @@
             <i class="fa-solid fa-forward-step"></i>
           </button>
 
-          <button class="control-btn speed-btn" id="speedBtn" title="Afspeelsnelheid">
-            <span id="speedLabel">1.0x</span>
+          <button class="control-btn secondary active" id="randomBtn" title="Shuffle" aria-pressed="true">
+            <i class="fa-solid fa-shuffle"></i>
           </button>
+
+          <div class="mix-control">
+            <button class="control-btn secondary active" id="mixBtn" title="Mix" aria-pressed="true" aria-label="Mix">
+              <svg class="mix-icon" viewBox="0 0 36 26" aria-hidden="true" focusable="false">
+                <!-- Soft offset edges -->
+                <polygon points="0.6,7.7 19.2,7.7 14,24.8 0.6,24.8" fill="none" stroke="currentColor" stroke-opacity="0.28" stroke-width="0.7"/>
+                <polygon points="19.2,1.2 34.8,1.2 34.8,16.8 14.4,16.8" fill="none" stroke="currentColor" stroke-opacity="0.22" stroke-width="0.7"/>
+                <!-- Left block -->
+                <polygon class="mix-icon-left" points="1.5,8.5 19,8.5 14,24 1.5,24" fill="currentColor"/>
+                <!-- Right block (overlap) -->
+                <polygon class="mix-icon-right" points="20,2 34.5,2 34.5,16.5 15.5,16.5" fill="currentColor" fill-opacity="0.4"/>
+                <!-- Hash marks in overlap -->
+                <g class="mix-icon-hash" stroke="currentColor" stroke-width="1.15" stroke-linecap="butt">
+                  <line x1="16.4" y1="12.6" x2="14.7" y2="17.8"/>
+                  <line x1="18.2" y1="12.2" x2="16.5" y2="17.4"/>
+                  <line x1="20" y1="11.8" x2="18.3" y2="17"/>
+                  <line x1="21.8" y1="11.4" x2="20.1" y2="16.6"/>
+                </g>
+              </svg>
+            </button>
+            <span class="mix-sec-label" id="mixDurationValue">…</span>
+          </div>
         </div>
 
         <!-- Volume & Extras -->
@@ -101,8 +156,11 @@
       <!-- Playlist Section -->
       <section class="playlist-card glass-panel">
         <div class="playlist-header">
-          <h3><i class="fa-solid fa-list-ul"></i> ALL AFTERPARTY SETS</h3>
-          <span class="track-count" id="trackCount">7 Tracks</span>
+          <div class="playlist-tabs" role="tablist">
+            <button type="button" class="playlist-tab active" id="tabAll" role="tab" aria-selected="true">All</button>
+            <button type="button" class="playlist-tab" id="tabMyList" role="tab" aria-selected="false">My list</button>
+          </div>
+          <span class="track-count" id="trackCount">0</span>
         </div>
 
         <div class="playlist-scroll" id="playlist">
@@ -117,8 +175,9 @@
     </footer>
   </div>
 
-  <!-- Audio Element -->
-  <audio id="audioPlayer" preload="metadata"></audio>
+  <!-- Dual audio decks for Mix crossfade -->
+  <audio id="audioPlayer" preload="auto"></audio>
+  <audio id="audioPlayerB" preload="auto"></audio>
 
   <script src="app.js"></script>
 </body>
