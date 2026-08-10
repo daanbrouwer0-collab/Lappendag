@@ -242,7 +242,7 @@ function updateNextTitle() {
     return;
   }
 
-  nextTitle.textContent = tracks[nextIndex].title;
+  nextTitle.textContent = `Volgende: ${tracks[nextIndex].title}`;
   nextTitle.hidden = false;
 }
 
