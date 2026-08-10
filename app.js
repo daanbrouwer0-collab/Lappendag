@@ -5,6 +5,7 @@ const TRACK_DIR = 'Lap-set';
 const TRACK_PREFIX = 'Lap_';
 const SCAN_MISS_LIMIT = 3;
 const SCAN_MAX = 500;
+const SCAN_CONCURRENCY = 6;
 const MY_LIST_KEY = 'lappendag-my-list';
 
 const MIX_MIN_SEC = 2;
@@ -70,6 +71,7 @@ const tabMyList = document.getElementById('tabMyList');
 
 // State
 let currentIndex = 0; // index in full `tracks` array
+let isScanning = false;
 let isPlaying = false;
 let isSeeking = false;
 let seekFallbackTimer = null;
@@ -433,23 +435,67 @@ async function fileExists(url) {
   }
 }
 
-async function scanTracks() {
-  const found = [];
+function makeTrack(n) {
+  const title = `${TRACK_PREFIX}${n}`;
+  return { id: n, title, file: `${TRACK_DIR}/${title}.mp3` };
+}
+
+function updateTrackCountStatus() {
+  const trackCountEl = document.getElementById('trackCount');
+  if (!trackCountEl) return;
+  if (isScanning) {
+    trackCountEl.textContent = `Laden… ${tracks.length}`;
+  } else {
+    trackCountEl.textContent = `${getVisibleTracks().length}`;
+  }
+}
+
+/** Batched progressive scan; invokes onFound for each existing file in order. */
+async function scanTracksProgressive(startN, onFound) {
+  let n = startN;
   let misses = 0;
 
-  for (let n = 1; n <= SCAN_MAX && misses < SCAN_MISS_LIMIT; n++) {
-    const name = `${TRACK_PREFIX}${n}`;
-    const file = `${TRACK_DIR}/${name}.mp3`;
-    const exists = await fileExists(file);
-    if (exists) {
-      found.push({ id: n, title: name, file });
-      misses = 0;
-    } else {
-      misses += 1;
+  while (n <= SCAN_MAX && misses < SCAN_MISS_LIMIT) {
+    const nums = [];
+    for (let i = 0; i < SCAN_CONCURRENCY && n + i <= SCAN_MAX; i++) {
+      nums.push(n + i);
     }
-  }
 
-  return found;
+    const results = await Promise.all(
+      nums.map(async (num) => {
+        const track = makeTrack(num);
+        const exists = await fileExists(track.file);
+        return { track, exists };
+      })
+    );
+
+    let stop = false;
+    for (const { track, exists } of results) {
+      if (exists) {
+        misses = 0;
+        onFound(track);
+      } else {
+        misses += 1;
+        if (misses >= SCAN_MISS_LIMIT) {
+          stop = true;
+          break;
+        }
+      }
+    }
+
+    if (stop) break;
+    n += nums.length;
+  }
+}
+
+function reconcileMyList() {
+  const byKey = new Map(tracks.map((t) => [trackKey(t.title), t.title]));
+  myListNames = [...new Set(
+    myListNames
+      .map((name) => byKey.get(trackKey(name)))
+      .filter(Boolean)
+  )];
+  saveMyList();
 }
 
 function getVisibleTracks() {
@@ -478,24 +524,9 @@ function indexInVisible(visible, globalIndex) {
 }
 
 async function initPlayer() {
-  currentTitle.textContent = 'Tracks laden...';
-  tracks = await scanTracks();
-
-  if (tracks.length === 0) {
-    currentTitle.textContent = 'Geen tracks gevonden';
-    playlistEl.innerHTML = '<p class="playlist-empty">Geen bestanden in Lap-set/ gevonden. Start een lokale server.</p>';
-    document.getElementById('trackCount').textContent = '0';
-    return;
-  }
-
-  // Keep My list across rename/case changes (LAP_1 → Lap_1)
-  const byKey = new Map(tracks.map((t) => [trackKey(t.title), t.title]));
-  myListNames = [...new Set(
-    myListNames
-      .map((n) => byKey.get(trackKey(n)))
-      .filter(Boolean)
-  )];
-  saveMyList();
+  const lap1 = makeTrack(1);
+  tracks = [lap1];
+  isScanning = true;
 
   audio.playbackRate = 1;
   audio.volume = masterVolume();
@@ -531,8 +562,51 @@ async function initPlayer() {
   window.addEventListener('resize', () => {
     if (!isSeeking) updateProgress();
   });
+
   renderPlaylist();
   loadTrack(0, false);
+
+  const lap1Ok = await fileExists(lap1.file);
+  let startN = 2;
+
+  if (!lap1Ok) {
+    tracks = [];
+    currentIndex = 0;
+    currentTitle.textContent = 'Tracks laden...';
+    if (audio.src) {
+      audio.removeAttribute('src');
+      audio.load();
+    }
+    renderPlaylist();
+    startN = 1;
+  }
+
+  await scanTracksProgressive(startN, (track) => {
+    if (tracks.some((t) => t.id === track.id)) return;
+    tracks.push(track);
+    tracks.sort((a, b) => a.id - b.id);
+    renderPlaylist();
+    if (!lap1Ok && tracks.length === 1) {
+      loadTrack(0, false);
+    }
+  });
+
+  isScanning = false;
+  reconcileMyList();
+
+  if (tracks.length === 0) {
+    currentTitle.textContent = 'Geen tracks gevonden';
+    playlistEl.innerHTML = '<p class="playlist-empty">Geen bestanden in Lap-set/ gevonden. Start een lokale server.</p>';
+    const trackCountEl = document.getElementById('trackCount');
+    if (trackCountEl) trackCountEl.textContent = '0';
+    return;
+  }
+
+  if (currentIndex >= tracks.length) {
+    loadTrack(0, false);
+  }
+
+  renderPlaylist();
 }
 
 function setTab(tab) {
@@ -1037,10 +1111,7 @@ function finishMix(nextIndex) {
 
 function renderPlaylist() {
   const visible = getVisibleTracks();
-  const trackCountEl = document.getElementById('trackCount');
-  if (trackCountEl) {
-    trackCountEl.textContent = `${visible.length}`;
-  }
+  updateTrackCountStatus();
 
   playlistEl.innerHTML = '';
 
