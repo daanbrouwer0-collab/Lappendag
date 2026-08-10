@@ -624,6 +624,14 @@ function setTab(tab) {
   if (mixOn) {
     scheduleAutoMixPrepare();
   }
+  // After a short My list shrinks the page, clamp scroll so iOS doesn't bounce/flicker.
+  requestAnimationFrame(() => {
+    const doc = document.documentElement;
+    const maxScroll = Math.max(0, doc.scrollHeight - window.innerHeight);
+    if (window.scrollY > maxScroll) {
+      window.scrollTo(0, maxScroll);
+    }
+  });
 }
 
 function toggleShuffle() {
@@ -1114,6 +1122,8 @@ function renderPlaylist() {
   updateTrackCountStatus();
 
   playlistEl.innerHTML = '';
+  // Clip+scroll from 3+ rows; shorter lists stay in page flow (avoids mobile flicker).
+  playlistEl.classList.toggle('is-clipped', visible.length >= 3);
 
   if (visible.length === 0) {
     const empty = document.createElement('p');

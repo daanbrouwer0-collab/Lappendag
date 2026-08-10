@@ -816,9 +816,14 @@ input[type="range"]#volumeSlider::-webkit-slider-thumb {
   flex-direction: column;
   gap: 0.75rem;
   overflow-y: auto;
+  padding-right: 0.3rem;
+}
+
+/* Nested scroll only when the list is long enough to need it.
+   Short My list + overflow:auto fights page scroll on phones (flicker). */
+.playlist-scroll.is-clipped {
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  padding-right: 0.3rem;
 }
 
 .playlist-scroll::-webkit-scrollbar {
@@ -1242,7 +1247,13 @@ input[type="range"]#volumeSlider::-webkit-slider-thumb {
   }
 
   .playlist-scroll {
-    max-height: min(40vh, 280px);
+    overflow-y: visible;
+    max-height: none;
+  }
+
+  .playlist-scroll.is-clipped {
+    overflow-y: auto;
+    max-height: 280px;
   }
 
   .track-item {
