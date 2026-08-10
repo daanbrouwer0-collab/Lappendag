@@ -1157,7 +1157,13 @@ function renderPlaylist() {
       toggleMyList(track.title);
     });
 
-    if (activeTab === 'mylist') {
+    // Native HTML5 drag fights touch scrolling on phones (flicker at page bottom).
+    // Keep reorder on fine pointers only (mouse / trackpad).
+    const canDragReorder =
+      activeTab === 'mylist'
+      && window.matchMedia('(pointer: fine)').matches;
+
+    if (canDragReorder) {
       item.draggable = true;
       item.classList.add('draggable');
       item.title = 'Sleep om volgorde te wijzigen';

@@ -816,6 +816,8 @@ input[type="range"]#volumeSlider::-webkit-slider-thumb {
   flex-direction: column;
   gap: 0.75rem;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding-right: 0.3rem;
 }
 
@@ -837,7 +839,9 @@ input[type="range"]#volumeSlider::-webkit-slider-thumb {
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: var(--transition);
+  transition: background 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  touch-action: pan-y;
 }
 
 .track-item.draggable {
@@ -856,17 +860,32 @@ input[type="range"]#volumeSlider::-webkit-slider-thumb {
 .track-item.drag-over {
   border-color: var(--neon-pink);
   background: rgba(255, 0, 127, 0.1);
-  transform: translateY(2px);
 }
 
-.track-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(204, 255, 0, 0.3);
-  transform: translateX(5px);
-}
+/* Hover transforms only on real hover devices — sticky :hover on phones flickers while scrolling */
+@media (hover: hover) and (pointer: fine) {
+  .track-item {
+    transition: var(--transition);
+  }
 
-.track-item.drag-over:hover {
-  transform: translateY(2px);
+  .track-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(204, 255, 0, 0.3);
+    transform: translateX(5px);
+  }
+
+  .track-item.drag-over {
+    transform: translateY(2px);
+  }
+
+  .track-item.drag-over:hover {
+    transform: translateY(2px);
+  }
+
+  .track-item.in-my-list:hover {
+    background: rgba(46, 160, 90, 0.12);
+    border-color: rgba(46, 160, 90, 0.35);
+  }
 }
 
 .track-item.in-my-list {
@@ -880,11 +899,6 @@ input[type="range"]#volumeSlider::-webkit-slider-thumb {
 
 .track-item.in-my-list .track-num {
   color: rgba(120, 180, 140, 0.7);
-}
-
-.track-item.in-my-list:hover {
-  background: rgba(46, 160, 90, 0.12);
-  border-color: rgba(46, 160, 90, 0.35);
 }
 
 .track-item.active {
