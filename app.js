@@ -214,7 +214,13 @@ function cancelMix() {
 }
 
 function planNextIndex() {
-  if (plannedNextIndex >= 0 && plannedNextIndex < tracks.length) {
+  const visible = getVisibleTracks();
+  // Drop a stale pick from when only 1 track existed (common right after Lap_1 bootstrap).
+  if (
+    plannedNextIndex >= 0
+    && plannedNextIndex < tracks.length
+    && !(plannedNextIndex === currentIndex && visible.length > 1)
+  ) {
     return plannedNextIndex;
   }
   plannedNextIndex = resolveNextIndex();
@@ -236,13 +242,14 @@ function updateNextTitle() {
     return;
   }
 
-  if (nextIndex === currentIndex && getVisibleTracks().length <= 1) {
+  // Only hide when there is genuinely no other track yet.
+  if (nextIndex === currentIndex) {
     nextTitle.textContent = '';
     nextTitle.hidden = true;
     return;
   }
 
-  nextTitle.textContent = `Volgende: ${tracks[nextIndex].title}`;
+  nextTitle.textContent = tracks[nextIndex].title;
   nextTitle.hidden = false;
 }
 
@@ -612,6 +619,9 @@ async function initPlayer() {
     renderPlaylist();
     if (!lap1Ok && tracks.length === 1) {
       loadTrack(0, false);
+    } else if (plannedNextIndex < 0 || plannedNextIndex === currentIndex) {
+      plannedNextIndex = -1;
+      updateNextTitle();
     }
   });
 
