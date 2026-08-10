@@ -1472,19 +1472,25 @@ function updateProgress() {
   if (isMixing && progressFillIncoming) {
     setMixProgressUi(true);
     const t = mixBlendT;
-    const outP = mixStartOutPercent + (100 - mixStartOutPercent) * t;
+    // Keep the thumb on the outgoing track (near the end). Blending toward the
+    // incoming 0% playhead made the scrubber fly backward during every mix.
+    let outP = mixStartOutPercent;
+    if (audio.duration && Number.isFinite(audio.duration) && audio.duration > 0) {
+      outP = (audio.currentTime / audio.duration) * 100;
+    }
     let inP = 0;
-    if (audioIncoming.duration && Number.isFinite(audioIncoming.duration) && audioIncoming.duration > 0) {
+    if (
+      audioIncoming.duration
+      && Number.isFinite(audioIncoming.duration)
+      && audioIncoming.duration > 0
+    ) {
       inP = (audioIncoming.currentTime / audioIncoming.duration) * 100;
     }
-    // Base fill stays normal cyan→lime and moves to the new playhead.
-    // Pink only peaks mid-mix (sin) so it fades out before handoff — no purple→yellow snap.
-    const blended = outP * (1 - t) + inP * t;
     const pinkPeak = Math.sin(t * Math.PI);
-    progressBar.value = blended;
+    progressBar.value = outP;
     if (progressFill) {
-      progressFill.style.width = `${fillWidthFromRangeValue(blended)}%`;
-      progressFill.style.opacity = '1';
+      progressFill.style.width = `${fillWidthFromRangeValue(outP)}%`;
+      progressFill.style.opacity = String(1 - 0.35 * t);
     }
     progressFillIncoming.style.width = `${fillWidthFromRangeValue(inP)}%`;
     progressFillIncoming.style.opacity = String(pinkPeak);
