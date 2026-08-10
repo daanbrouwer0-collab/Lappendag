@@ -1012,7 +1012,10 @@ function effectiveMixSeconds(duration, preferredSec) {
 
 function onAudioTimeUpdate(e) {
   if (e.target !== audio) return;
-  updateProgress();
+  // During mix the rAF loop owns the scrubber — dual updates caused jitter.
+  if (!isMixing) {
+    updateProgress();
+  }
   if (mixOn && audio.duration) {
     const remaining = audio.duration - audio.currentTime;
     // Start analysis once the player can seek; near the end insist on prepare.
@@ -1472,8 +1475,6 @@ function updateProgress() {
   if (isMixing && progressFillIncoming) {
     setMixProgressUi(true);
     const t = mixBlendT;
-    // Keep the thumb on the outgoing track (near the end). Blending toward the
-    // incoming 0% playhead made the scrubber fly backward during every mix.
     let outP = mixStartOutPercent;
     if (audio.duration && Number.isFinite(audio.duration) && audio.duration > 0) {
       outP = (audio.currentTime / audio.duration) * 100;
@@ -1486,11 +1487,16 @@ function updateProgress() {
     ) {
       inP = (audioIncoming.currentTime / audioIncoming.duration) * 100;
     }
+    // Stay on the outgoing playhead for most of the mix, then ease into the
+    // incoming position in the last quarter — smooth handoff, no hard jump.
+    const settle = t <= 0.75 ? 0 : (t - 0.75) / 0.25;
+    const scrubT = easeMix(settle);
+    const scrubP = outP * (1 - scrubT) + inP * scrubT;
     const pinkPeak = Math.sin(t * Math.PI);
-    progressBar.value = outP;
+    progressBar.value = scrubP;
     if (progressFill) {
-      progressFill.style.width = `${fillWidthFromRangeValue(outP)}%`;
-      progressFill.style.opacity = String(1 - 0.35 * t);
+      progressFill.style.width = `${fillWidthFromRangeValue(scrubP)}%`;
+      progressFill.style.opacity = String(1 - 0.25 * scrubT);
     }
     progressFillIncoming.style.width = `${fillWidthFromRangeValue(inP)}%`;
     progressFillIncoming.style.opacity = String(pinkPeak);
