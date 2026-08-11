@@ -26,10 +26,14 @@ let mixBlendT = 0;
 let mixStartOutPercent = 0;
 /** Outgoing audio.currentTime when the mix fade started. */
 let mixAudioT0 = 0;
-/** Mix fade length in seconds (audio-clock, not rAF). */
+/** performance.now() when the mix fade started (reliable while visible). */
+let mixWallT0 = 0;
+/** Mix fade length in seconds. */
 let mixDurationSec = 0;
 /** True while waiting for incoming.play() before the fade is armed. */
 let mixStarting = false;
+let mixRaf = null;
+let nextWarmTimer = null;
 
 function easeMix(t) {
   const x = Math.min(1, Math.max(0, t));
@@ -201,6 +205,14 @@ function clearDeck(el) {
 }
 
 function cancelMix() {
+  if (mixRaf != null) {
+    cancelAnimationFrame(mixRaf);
+    mixRaf = null;
+  }
+  if (nextWarmTimer != null) {
+    clearTimeout(nextWarmTimer);
+    nextWarmTimer = null;
+  }
   isMixing = false;
   mixStarting = false;
   pendingMixIndex = -1;
@@ -208,6 +220,7 @@ function cancelMix() {
   mixBlendT = 0;
   mixStartOutPercent = 0;
   mixAudioT0 = 0;
+  mixWallT0 = 0;
   mixDurationSec = 0;
   clearDeck(audioIncoming);
   if (!audio.muted) {
@@ -729,24 +742,81 @@ function incomingAlreadyHas(file) {
   return src.includes(file) || src.endsWith(file);
 }
 
+function incomingBufferedSeconds() {
+  try {
+    if (!audioIncoming.buffered || !audioIncoming.buffered.length) return 0;
+    return audioIncoming.buffered.end(audioIncoming.buffered.length - 1);
+  } catch {
+    return 0;
+  }
+}
+
+function pauseIncomingAtStart() {
+  audioIncoming.pause();
+  try {
+    audioIncoming.currentTime = 0;
+  } catch (_) {
+    // ignore seek errors before metadata
+  }
+  audioIncoming.muted = false;
+  audioIncoming.volume = 0;
+}
+
+/** Kick the next track download while the screen is still on (play→pause). */
 function ensureNextBuffered() {
-  if (!tracks.length || isMixing) return;
+  if (!tracks.length || isMixing || mixStarting) return;
   if (!isPlaying || !deckHasTrackSrc()) return;
   if (!mediaHasHealthyBuffer()) return;
+
+  const remaining = audio.duration && Number.isFinite(audio.duration)
+    ? audio.duration - audio.currentTime
+    : Infinity;
+  // Leave bandwidth for the current track near the end.
+  if (remaining < 25) return;
+
   const nextIndex = planNextIndex();
   if (nextIndex < 0 || nextIndex === currentIndex) return;
   const next = tracks[nextIndex];
   if (!next) return;
-  if (incomingAlreadyHas(next.file)) return;
 
-  audioIncoming.src = next.file;
+  if (incomingAlreadyHas(next.file) && incomingBufferedSeconds() >= 12) {
+    return;
+  }
+
+  if (!incomingAlreadyHas(next.file)) {
+    audioIncoming.src = next.file;
+  }
   audioIncoming.playbackRate = 1;
   audioIncoming.volume = 0;
-  // Do not play until startMix / explicit navigation
+  audioIncoming.muted = true;
+
+  const warmToken = next.file;
+  audioIncoming.play().then(() => {
+    if (isMixing || mixStarting) return;
+    if (!incomingAlreadyHas(warmToken)) return;
+
+    const check = () => {
+      nextWarmTimer = null;
+      if (isMixing || mixStarting) return;
+      if (!incomingAlreadyHas(warmToken)) return;
+      if (incomingBufferedSeconds() >= 12 || audioIncoming.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
+        pauseIncomingAtStart();
+        return;
+      }
+      nextWarmTimer = setTimeout(check, 400);
+    };
+    check();
+  }).catch(() => {
+    // Keep src for a later mix attempt; browser may still buffer via load.
+  });
 }
 
 function clearIncomingIfIdle() {
-  if (isMixing) return;
+  if (isMixing || mixStarting) return;
+  if (nextWarmTimer != null) {
+    clearTimeout(nextWarmTimer);
+    nextWarmTimer = null;
+  }
   clearDeck(audioIncoming);
 }
 
@@ -820,10 +890,11 @@ function effectiveMixSeconds(duration, preferredSec) {
 }
 
 function onAudioTimeUpdate(e) {
-  // During mix, both decks may emit timeupdate — tick from either.
   if (isMixing) {
     if (e.target === audio || e.target === audioIncoming) {
-      tickMix();
+      // Keep UI in sync; fade itself is driven by rAF/wall clock while visible.
+      updateProgress();
+      tickMixFromAudio();
     }
     return;
   }
@@ -861,19 +932,12 @@ function maybeStartMix() {
   if (!mixSec) return;
   if (remaining > mixSec) return;
 
-  // If analysis finished late, fade over the time that is actually left.
   const liveSec = Math.min(mixSec, remaining - 0.05);
   if (liveSec < 1.5) return;
   startMix(liveSec);
 }
 
-function tickMix() {
-  if (!isMixing || pendingMixIndex < 0) return;
-  // Fade not armed yet (waiting for incoming.play) — do not finish early.
-  if (!mixDurationSec || mixDurationSec <= 0) return;
-
-  const elapsed = Math.max(0, audio.currentTime - mixAudioT0);
-  const rawT = Math.min(1, elapsed / mixDurationSec);
+function applyMixVolumes(rawT) {
   const t = easeMix(rawT);
   mixBlendT = t;
   const m = masterVolume();
@@ -882,7 +946,39 @@ function tickMix() {
     audioIncoming.volume = m * t;
   }
   updateProgress();
+  return t;
+}
 
+/** Wall-clock fade (smooth on screen). */
+function tickMixFrame(now) {
+  if (!isMixing || pendingMixIndex < 0) return;
+  if (!mixDurationSec || mixDurationSec <= 0) return;
+
+  const elapsedSec = Math.max(0, (now - mixWallT0) / 1000);
+  const rawT = Math.min(1, elapsedSec / mixDurationSec);
+  applyMixVolumes(rawT);
+
+  if (rawT >= 1) {
+    mixRaf = null;
+    finishMix(pendingMixIndex);
+    return;
+  }
+  if (document.visibilityState === 'visible') {
+    mixRaf = requestAnimationFrame(tickMixFrame);
+  } else {
+    mixRaf = null;
+  }
+}
+
+/** Audio-clock fallback when rAF is frozen (lock screen). */
+function tickMixFromAudio() {
+  if (!isMixing || pendingMixIndex < 0) return;
+  if (!mixDurationSec || mixDurationSec <= 0) return;
+  if (document.visibilityState === 'visible' && mixRaf != null) return;
+
+  const elapsedSec = Math.max(0, audio.currentTime - mixAudioT0);
+  const rawT = Math.min(1, elapsedSec / mixDurationSec);
+  applyMixVolumes(rawT);
   if (rawT >= 1) {
     finishMix(pendingMixIndex);
   }
@@ -897,17 +993,33 @@ function startMix(mixSec) {
   pendingMixIndex = nextIndex;
   const nextTrack = tracks[nextIndex];
 
-  // Prefer already-buffered next; only set src if needed.
+  if (nextWarmTimer != null) {
+    clearTimeout(nextWarmTimer);
+    nextWarmTimer = null;
+  }
+
   if (!incomingAlreadyHas(nextTrack.file)) {
     audioIncoming.src = nextTrack.file;
   }
   audioIncoming.playbackRate = 1;
-  audioIncoming.muted = audio.muted;
+  audioIncoming.muted = false;
   audioIncoming.volume = 0;
+  try {
+    audioIncoming.currentTime = 0;
+  } catch (_) {
+    // metadata may not be ready yet
+  }
 
   audioIncoming.play().then(() => {
     if (!mixStarting || pendingMixIndex !== nextIndex) return;
+    try {
+      if (audioIncoming.currentTime > 0.25) {
+        audioIncoming.currentTime = 0;
+      }
+    } catch (_) {}
+
     mixAudioT0 = audio.currentTime;
+    mixWallT0 = performance.now();
     mixDurationSec = mixSec;
     mixStartOutPercent = audio.duration
       ? (audio.currentTime / audio.duration) * 100
@@ -916,7 +1028,10 @@ function startMix(mixSec) {
     mixStarting = false;
     isMixing = true;
     setMixProgressUi(true);
-    tickMix();
+    applyMixVolumes(0);
+    if (document.visibilityState === 'visible') {
+      mixRaf = requestAnimationFrame(tickMixFrame);
+    }
   }).catch((err) => {
     console.error('Mix start failed:', err);
     cancelMix();
@@ -924,6 +1039,10 @@ function startMix(mixSec) {
 }
 
 function finishMix(nextIndex) {
+  if (mixRaf != null) {
+    cancelAnimationFrame(mixRaf);
+    mixRaf = null;
+  }
   mixStarting = false;
   const outgoing = audio;
   outgoing.pause();
@@ -954,7 +1073,12 @@ function finishMix(nextIndex) {
   mixBlendT = 0;
   mixStartOutPercent = 0;
   mixAudioT0 = 0;
+  mixWallT0 = 0;
   mixDurationSec = 0;
+
+  if (audio.paused) {
+    audio.play().catch((err) => console.error('Post-mix play failed:', err));
+  }
 
   const handoffPercent = audio.duration
     ? (audio.currentTime / audio.duration) * 100
@@ -980,11 +1104,16 @@ function finishMix(nextIndex) {
 }
 
 function onVisibilityChange() {
-  // Screen lock / background: snap any in-progress mix so the incoming
-  // track becomes the active deck (audio keeps playing without rAF).
-  if (document.visibilityState !== 'hidden') return;
-  if (isMixing && mixDurationSec > 0 && pendingMixIndex >= 0) {
-    finishMix(pendingMixIndex);
+  if (document.visibilityState === 'hidden') {
+    // Snap an active fade so the next deck is already playing under lock.
+    if (isMixing && mixDurationSec > 0 && pendingMixIndex >= 0) {
+      finishMix(pendingMixIndex);
+    }
+    return;
+  }
+  // Screen on again: resume rAF fade if still mixing.
+  if (isMixing && mixDurationSec > 0 && mixRaf == null) {
+    mixRaf = requestAnimationFrame(tickMixFrame);
   }
 }
 
@@ -1225,6 +1354,24 @@ function onTrackEnded(e) {
 
   if (isMixing && pendingMixIndex >= 0) {
     finishMix(pendingMixIndex);
+    return;
+  }
+
+  // Prefer a next track that was already warmed on the incoming deck
+  // (critical when the screen is locked and a new download would fail).
+  const nextIndex = planNextIndex();
+  const next = nextIndex >= 0 ? tracks[nextIndex] : null;
+  if (next && incomingAlreadyHas(next.file)) {
+    pendingMixIndex = nextIndex;
+    audioIncoming.muted = false;
+    audioIncoming.volume = masterVolume();
+    const start = audioIncoming.paused ? audioIncoming.play() : Promise.resolve();
+    start
+      .then(() => finishMix(nextIndex))
+      .catch(() => {
+        if (shuffleOn) playRandom();
+        else playNext();
+      });
     return;
   }
 
