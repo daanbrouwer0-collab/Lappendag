@@ -1,17 +1,14 @@
 // Lappendag Rave Afterparty - Audio Engine
-// Tracks are discovered by probing Lap-set/Lap_n.mp3 (needs HTTP(S), not file://).
+// Track catalog + mix points come from tracks.json (needs HTTP(S), not file://).
 
 const TRACK_DIR = 'Lap-set';
 const TRACK_PREFIX = 'Lap_';
-const SCAN_MISS_LIMIT = 3;
-const SCAN_MAX = 500;
-const SCAN_CONCURRENCY = 6;
 const MY_LIST_KEY = 'lappendag-my-list';
 
 const MIX_MIN_SEC = 2;
 const MIX_MAX_SEC = 12;
 const MIX_DEFAULT_SEC = 6;
-/** Auto never picks shorter than this once analysis is ready. */
+/** Auto never picks shorter than this once mix points are ready. */
 const AUTO_MIX_MIN_SEC = 3.5;
 
 let tracks = [];
@@ -28,8 +25,6 @@ let pendingMixIndex = -1;
 let mixRaf = null;
 let mixBlendT = 0;
 let mixStartOutPercent = 0;
-let mixAudioCtx = null;
-const mixAnalysisCache = new Map();
 
 function easeMix(t) {
   const x = Math.min(1, Math.max(0, t));
@@ -73,13 +68,13 @@ const tabMyList = document.getElementById('tabMyList');
 
 // State
 let currentIndex = 0; // index in full `tracks` array
-let isScanning = false;
 let isPlaying = false;
 let isSeeking = false;
 let seekFallbackTimer = null;
 let pendingSeekTime = null;
 let autoMixPrepareTimer = null;
 const SILENCE_WAV = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAIDRhYWR0AgAAAAEA';
+const IDLE_TITLE = 'Druk play';
 
 function masterVolume() {
   return Number(volumeSlider.value);
@@ -430,88 +425,26 @@ function toggleMyList(name) {
   updateNowPlayingListBtn();
 }
 
-async function fileExists(url) {
-  // cache: 'no-store' — tiny probe responses must not poison the audio cache
-  // (that broke seeking on LAP_1 until a second full download).
-  const probe = { method: 'HEAD', cache: 'no-store' };
-  try {
-    const head = await fetch(url, probe);
-    if (head.ok) return true;
-    // Some hosts disallow HEAD; fall back to a tiny GET (also uncached)
-    if (head.status === 405 || head.status === 501) {
-      const get = await fetch(url, {
-        method: 'GET',
-        cache: 'no-store',
-        headers: { Range: 'bytes=0-0' },
-      });
-      return get.ok || get.status === 206;
-    }
-    return false;
-  } catch {
-    try {
-      const get = await fetch(url, {
-        method: 'GET',
-        cache: 'no-store',
-        headers: { Range: 'bytes=0-0' },
-      });
-      return get.ok || get.status === 206;
-    } catch {
-      return false;
-    }
+async function loadTracksManifest() {
+  const res = await fetch('tracks.json', { cache: 'no-cache' });
+  if (!res.ok) throw new Error(`tracks.json HTTP ${res.status}`);
+  const data = await res.json();
+  if (!data || !Array.isArray(data.tracks) || !data.tracks.length) {
+    throw new Error('tracks.json missing tracks[]');
   }
-}
-
-function makeTrack(n) {
-  const title = `${TRACK_PREFIX}${n}`;
-  return { id: n, title, file: `${TRACK_DIR}/${title}.mp3` };
+  tracks = data.tracks.map((t) => ({
+    id: Number(t.id),
+    title: String(t.title || `${TRACK_PREFIX}${t.id}`),
+    file: String(t.file || `${TRACK_DIR}/${TRACK_PREFIX}${t.id}.mp3`),
+    introSec: Number(t.introSec),
+    outroSec: Number(t.outroSec),
+  })).sort((a, b) => a.id - b.id);
 }
 
 function updateTrackCountStatus() {
   const trackCountEl = document.getElementById('trackCount');
   if (!trackCountEl) return;
-  if (isScanning) {
-    trackCountEl.textContent = `Laden… ${tracks.length}`;
-  } else {
-    trackCountEl.textContent = `${getVisibleTracks().length}`;
-  }
-}
-
-/** Batched progressive scan; invokes onFound for each existing file in order. */
-async function scanTracksProgressive(startN, onFound) {
-  let n = startN;
-  let misses = 0;
-
-  while (n <= SCAN_MAX && misses < SCAN_MISS_LIMIT) {
-    const nums = [];
-    for (let i = 0; i < SCAN_CONCURRENCY && n + i <= SCAN_MAX; i++) {
-      nums.push(n + i);
-    }
-
-    const results = await Promise.all(
-      nums.map(async (num) => {
-        const track = makeTrack(num);
-        const exists = await fileExists(track.file);
-        return { track, exists };
-      })
-    );
-
-    let stop = false;
-    for (const { track, exists } of results) {
-      if (exists) {
-        misses = 0;
-        onFound(track);
-      } else {
-        misses += 1;
-        if (misses >= SCAN_MISS_LIMIT) {
-          stop = true;
-          break;
-        }
-      }
-    }
-
-    if (stop) break;
-    n += nums.length;
-  }
+  trackCountEl.textContent = `${getVisibleTracks().length}`;
 }
 
 function reconcileMyList() {
@@ -550,10 +483,6 @@ function indexInVisible(visible, globalIndex) {
 }
 
 async function initPlayer() {
-  const lap1 = makeTrack(1);
-  tracks = [lap1];
-  isScanning = true;
-
   audio.playbackRate = 1;
   audio.volume = masterVolume();
   audioIncoming.volume = masterVolume();
@@ -593,55 +522,28 @@ async function initPlayer() {
     if (!isSeeking) updateProgress();
   });
 
+  currentTitle.textContent = IDLE_TITLE;
+  updateNowPlayingListBtn();
   renderPlaylist();
-  loadTrack(0, false);
 
-  const lap1Ok = await fileExists(lap1.file);
-  let startN = 2;
-
-  if (!lap1Ok) {
+  try {
+    await loadTracksManifest();
+  } catch (err) {
+    console.error('Failed to load tracks.json:', err);
     tracks = [];
     currentIndex = 0;
-    currentTitle.textContent = 'Tracks laden...';
-    updateNowPlayingListBtn();
-    if (audio.src) {
-      audio.removeAttribute('src');
-      audio.load();
-    }
-    renderPlaylist();
-    startN = 1;
-  }
-
-  await scanTracksProgressive(startN, (track) => {
-    if (tracks.some((t) => t.id === track.id)) return;
-    tracks.push(track);
-    tracks.sort((a, b) => a.id - b.id);
-    renderPlaylist();
-    if (!lap1Ok && tracks.length === 1) {
-      loadTrack(0, false);
-    } else if (plannedNextIndex < 0 || plannedNextIndex === currentIndex) {
-      plannedNextIndex = -1;
-      updateNextTitle();
-    }
-  });
-
-  isScanning = false;
-  reconcileMyList();
-
-  if (tracks.length === 0) {
     currentTitle.textContent = 'Geen tracks gevonden';
     updateNowPlayingListBtn();
-    playlistEl.innerHTML = '<p class="playlist-empty">Geen bestanden in Lap-set/ gevonden. Start een lokale server.</p>';
+    playlistEl.innerHTML = '<p class="playlist-empty">tracks.json ontbreekt of is ongeldig.</p>';
     const trackCountEl = document.getElementById('trackCount');
     if (trackCountEl) trackCountEl.textContent = '0';
     return;
   }
 
-  if (currentIndex >= tracks.length) {
-    loadTrack(0, false);
-  }
-
+  reconcileMyList();
   renderPlaylist();
+  updateNextTitle();
+  updateTrackCountStatus();
 }
 
 function setTab(tab) {
