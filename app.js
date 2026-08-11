@@ -1223,6 +1223,7 @@ function onTrackEnded(e) {
     return;
   }
 
+  // Keep the playback chain alive (important when the screen is locked).
   if (shuffleOn) {
     playRandom();
   } else {
