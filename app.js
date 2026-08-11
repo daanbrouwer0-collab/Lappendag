@@ -224,7 +224,7 @@ function planNextIndex() {
 
 function updateNextTitle() {
   if (!nextTitle) return;
-  if (!tracks.length) {
+  if (!tracks.length || !deckHasTrackSrc()) {
     nextTitle.textContent = '';
     nextTitle.hidden = true;
     return;
@@ -398,7 +398,7 @@ function isInMyList(name) {
 function updateNowPlayingListBtn() {
   if (!nowPlayingListBtn || !nowPlayingListIcon) return;
   const track = tracks[currentIndex];
-  if (!track) {
+  if (!track || !deckHasTrackSrc()) {
     nowPlayingListBtn.hidden = true;
     return;
   }
@@ -1240,11 +1240,31 @@ function unlockAudioDecks() {
   });
 }
 
+function pickStartIndex() {
+  const visible = getVisibleTracks();
+  if (!visible.length) return -1;
+  if (shuffleOn) {
+    const pick = visible[Math.floor(Math.random() * visible.length)];
+    return tracks.indexOf(pick);
+  }
+  return tracks.indexOf(visible[0]);
+}
+
+function deckHasTrackSrc() {
+  const src = audio.currentSrc || audio.getAttribute('src') || '';
+  return Boolean(src) && !src.startsWith('data:');
+}
+
 function playTrack() {
   if (!tracks.length) return;
+  if (!deckHasTrackSrc()) {
+    const idx = pickStartIndex();
+    if (idx < 0) return;
+    loadTrack(idx, true);
+    return;
+  }
   audio.play().then(() => {
     unlockAudioDecks();
-    getMixAudioContext();
     isPlaying = true;
     playIcon.className = 'fa-solid fa-pause';
     disc.classList.add('spinning');
@@ -1292,6 +1312,10 @@ function playRandom() {
 }
 
 function playNext() {
+  if (!deckHasTrackSrc()) {
+    playTrack();
+    return;
+  }
   cancelMix();
   const nextIndex = resolveNextIndex();
   if (nextIndex < 0) return;
@@ -1299,6 +1323,10 @@ function playNext() {
 }
 
 function playPrevious() {
+  if (!deckHasTrackSrc()) {
+    playTrack();
+    return;
+  }
   cancelMix();
   const visible = getVisibleTracks();
   if (!visible.length) return;
