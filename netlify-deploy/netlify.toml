@@ -1,4 +1,8 @@
-# Geen build-commando. Deze map zo naar Netlify deployen (drag & drop of CLI).
-# Alleen de loader; muziek/site laden vanaf GitHub/CDN.
+# Alleen deze map deployen (drag & drop of publish dir = netlify-deploy).
+# Geen build, geen asset-optimalisatie — spaart tijd en credits.
 [build]
   publish = "."
+  command = "true"
+
+[build.processing]
+  skip_processing = true
