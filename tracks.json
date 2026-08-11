@@ -4,7 +4,7 @@
       "id": 1,
       "title": "Lap_1",
       "file": "Lap-set/Lap_1.mp3",
-      "introSec": 9.760000000000002,
+      "introSec": 9.8,
       "outroSec": 3.5
     },
     {
@@ -26,7 +26,7 @@
       "title": "Lap_4",
       "file": "Lap-set/Lap_4.mp3",
       "introSec": 4.5,
-      "outroSec": 6.139390083066941
+      "outroSec": 6.1
     },
     {
       "id": 5,
@@ -47,13 +47,13 @@
       "title": "Lap_7",
       "file": "Lap-set/Lap_7.mp3",
       "introSec": 4.5,
-      "outroSec": 9.138533534621793
+      "outroSec": 9.1
     },
     {
       "id": 8,
       "title": "Lap_8",
       "file": "Lap-set/Lap_8.mp3",
-      "introSec": 3.6500000000000004,
+      "introSec": 3.7,
       "outroSec": 3.5
     },
     {
@@ -74,7 +74,7 @@
       "id": 11,
       "title": "Lap_11",
       "file": "Lap-set/Lap_11.mp3",
-      "introSec": 10.55,
+      "introSec": 10.6,
       "outroSec": 3.5
     },
     {
@@ -123,7 +123,7 @@
       "id": 18,
       "title": "Lap_18",
       "file": "Lap-set/Lap_18.mp3",
-      "introSec": 9.75,
+      "introSec": 9.8,
       "outroSec": 3.5
     },
     {
@@ -145,13 +145,13 @@
       "title": "Lap_21",
       "file": "Lap-set/Lap_21.mp3",
       "introSec": 3.5,
-      "outroSec": 9.372219843377264
+      "outroSec": 9.4
     },
     {
       "id": 22,
       "title": "Lap_22",
       "file": "Lap-set/Lap_22.mp3",
-      "introSec": 8.8325,
+      "introSec": 8.8,
       "outroSec": 3.5
     },
     {
@@ -166,7 +166,7 @@
       "title": "Lap_24",
       "file": "Lap-set/Lap_24.mp3",
       "introSec": 3.5,
-      "outroSec": 3.5500000000000003
+      "outroSec": 3.6
     },
     {
       "id": 25,
@@ -180,20 +180,20 @@
       "title": "Lap_26",
       "file": "Lap-set/Lap_26.mp3",
       "introSec": 3.5,
-      "outroSec": 9.212766030902785
+      "outroSec": 9.2
     },
     {
       "id": 27,
       "title": "Lap_27",
       "file": "Lap-set/Lap_27.mp3",
       "introSec": 3.5,
-      "outroSec": 8.991377203826003
+      "outroSec": 9
     },
     {
       "id": 28,
       "title": "Lap_28",
       "file": "Lap-set/Lap_28.mp3",
-      "introSec": 4.65,
+      "introSec": 4.7,
       "outroSec": 3.5
     },
     {
@@ -201,27 +201,27 @@
       "title": "Lap_29",
       "file": "Lap-set/Lap_29.mp3",
       "introSec": 3.5,
-      "outroSec": 8.623554050461314
+      "outroSec": 8.6
     },
     {
       "id": 30,
       "title": "Lap_30",
       "file": "Lap-set/Lap_30.mp3",
-      "introSec": 10.55,
+      "introSec": 10.6,
       "outroSec": 3.5
     },
     {
       "id": 31,
       "title": "Lap_31",
       "file": "Lap-set/Lap_31.mp3",
-      "introSec": 9.05,
+      "introSec": 9.1,
       "outroSec": 3.5
     },
     {
       "id": 32,
       "title": "Lap_32",
       "file": "Lap-set/Lap_32.mp3",
-      "introSec": 10.935,
+      "introSec": 10.9,
       "outroSec": 3.5
     },
     {
@@ -242,7 +242,7 @@
       "id": 35,
       "title": "Lap_35",
       "file": "Lap-set/Lap_35.mp3",
-      "introSec": 7.95,
+      "introSec": 8,
       "outroSec": 3.5
     },
     {
@@ -298,8 +298,8 @@
       "id": 43,
       "title": "Lap_43",
       "file": "Lap-set/Lap_43.mp3",
-      "introSec": 4.95,
-      "outroSec": 9.816065498645553
+      "introSec": 5,
+      "outroSec": 9.8
     },
     {
       "id": 44,
@@ -347,7 +347,7 @@
       "id": 50,
       "title": "Lap_50",
       "file": "Lap-set/Lap_50.mp3",
-      "introSec": 7.5225,
+      "introSec": 7.5,
       "outroSec": 3.5
     },
     {
@@ -403,15 +403,15 @@
       "id": 58,
       "title": "Lap_58",
       "file": "Lap-set/Lap_58.mp3",
-      "introSec": 10.15,
-      "outroSec": 6.497933223666618
+      "introSec": 10.2,
+      "outroSec": 6.5
     },
     {
       "id": 59,
       "title": "Lap_59",
       "file": "Lap-set/Lap_59.mp3",
       "introSec": 8.9,
-      "outroSec": 6.386231920747265
+      "outroSec": 6.4
     },
     {
       "id": 60,
@@ -473,14 +473,14 @@
       "id": 68,
       "title": "Lap_68",
       "file": "Lap-set/Lap_68.mp3",
-      "introSec": 6.1075,
+      "introSec": 6.1,
       "outroSec": 3.5
     },
     {
       "id": 69,
       "title": "Lap_69",
       "file": "Lap-set/Lap_69.mp3",
-      "introSec": 7.8950000000000005,
+      "introSec": 7.9,
       "outroSec": 3.5
     },
     {
@@ -488,13 +488,13 @@
       "title": "Lap_70",
       "file": "Lap-set/Lap_70.mp3",
       "introSec": 3.5,
-      "outroSec": 7.1000000000000005
+      "outroSec": 7.1
     },
     {
       "id": 71,
       "title": "Lap_71",
       "file": "Lap-set/Lap_71.mp3",
-      "introSec": 11.65,
+      "introSec": 11.7,
       "outroSec": 3.5
     },
     {
@@ -522,7 +522,7 @@
       "id": 75,
       "title": "Lap_75",
       "file": "Lap-set/Lap_75.mp3",
-      "introSec": 10.850000000000001,
+      "introSec": 10.9,
       "outroSec": 3.5
     },
     {
@@ -536,8 +536,8 @@
       "id": 77,
       "title": "Lap_77",
       "file": "Lap-set/Lap_77.mp3",
-      "introSec": 10.25,
-      "outroSec": 9.655897355160844
+      "introSec": 10.3,
+      "outroSec": 9.7
     },
     {
       "id": 78,
@@ -564,21 +564,21 @@
       "id": 81,
       "title": "Lap_81",
       "file": "Lap-set/Lap_81.mp3",
-      "introSec": 8.15,
+      "introSec": 8.2,
       "outroSec": 3.5
     },
     {
       "id": 82,
       "title": "Lap_82",
       "file": "Lap-set/Lap_82.mp3",
-      "introSec": 4.65,
+      "introSec": 4.7,
       "outroSec": 3.5
     },
     {
       "id": 83,
       "title": "Lap_83",
       "file": "Lap-set/Lap_83.mp3",
-      "introSec": 4.455000000000001,
+      "introSec": 4.5,
       "outroSec": 3.5
     },
     {
@@ -600,7 +600,7 @@
       "title": "Lap_86",
       "file": "Lap-set/Lap_86.mp3",
       "introSec": 3.5,
-      "outroSec": 5.1000000000000005
+      "outroSec": 5.1
     },
     {
       "id": 87,
@@ -627,7 +627,7 @@
       "id": 90,
       "title": "Lap_90",
       "file": "Lap-set/Lap_90.mp3",
-      "introSec": 10.850000000000001,
+      "introSec": 10.9,
       "outroSec": 3.5
     },
     {
@@ -635,7 +635,7 @@
       "title": "Lap_91",
       "file": "Lap-set/Lap_91.mp3",
       "introSec": 4.5,
-      "outroSec": 5.01
+      "outroSec": 5
     },
     {
       "id": 92,
@@ -655,7 +655,7 @@
       "id": 94,
       "title": "Lap_94",
       "file": "Lap-set/Lap_94.mp3",
-      "introSec": 6.0225,
+      "introSec": 6,
       "outroSec": 3.5
     },
     {
@@ -669,14 +669,14 @@
       "id": 96,
       "title": "Lap_96",
       "file": "Lap-set/Lap_96.mp3",
-      "introSec": 5.78,
+      "introSec": 5.8,
       "outroSec": 3.5
     },
     {
       "id": 97,
       "title": "Lap_97",
       "file": "Lap-set/Lap_97.mp3",
-      "introSec": 5.25,
+      "introSec": 5.3,
       "outroSec": 3.5
     },
     {
@@ -705,28 +705,28 @@
       "title": "Lap_101",
       "file": "Lap-set/Lap_101.mp3",
       "introSec": 3.5,
-      "outroSec": 5.050000000000001
+      "outroSec": 5.1
     },
     {
       "id": 102,
       "title": "Lap_102",
       "file": "Lap-set/Lap_102.mp3",
       "introSec": 3.5,
-      "outroSec": 5.760000000000001
+      "outroSec": 5.8
     },
     {
       "id": 103,
       "title": "Lap_103",
       "file": "Lap-set/Lap_103.mp3",
-      "introSec": 6.25,
-      "outroSec": 9.411886476110483
+      "introSec": 6.3,
+      "outroSec": 9.4
     },
     {
       "id": 104,
       "title": "Lap_104",
       "file": "Lap-set/Lap_104.mp3",
-      "introSec": 10.15,
-      "outroSec": 7.6000000000000005
+      "introSec": 10.2,
+      "outroSec": 7.6
     },
     {
       "id": 105,
@@ -747,7 +747,7 @@
       "title": "Lap_107",
       "file": "Lap-set/Lap_107.mp3",
       "introSec": 3.5,
-      "outroSec": 9.024944561982327
+      "outroSec": 9
     },
     {
       "id": 108,
@@ -767,7 +767,7 @@
       "id": 110,
       "title": "Lap_110",
       "file": "Lap-set/Lap_110.mp3",
-      "introSec": 10.15,
+      "introSec": 10.2,
       "outroSec": 3.5
     },
     {
@@ -775,7 +775,7 @@
       "title": "Lap_111",
       "file": "Lap-set/Lap_111.mp3",
       "introSec": 3.5,
-      "outroSec": 6.045424577187952
+      "outroSec": 6
     },
     {
       "id": 112,
@@ -796,7 +796,7 @@
       "title": "Lap_114",
       "file": "Lap-set/Lap_114.mp3",
       "introSec": 3.5,
-      "outroSec": 9.455280717481362
+      "outroSec": 9.5
     },
     {
       "id": 115,
@@ -844,7 +844,7 @@
       "id": 121,
       "title": "Lap_121",
       "file": "Lap-set/Lap_121.mp3",
-      "introSec": 3.535,
+      "introSec": 3.5,
       "outroSec": 3.5
     },
     {
@@ -852,7 +852,7 @@
       "title": "Lap_122",
       "file": "Lap-set/Lap_122.mp3",
       "introSec": 3.5,
-      "outroSec": 9.647395484192964
+      "outroSec": 9.6
     },
     {
       "id": 123,
@@ -865,7 +865,7 @@
       "id": 124,
       "title": "Lap_124",
       "file": "Lap-set/Lap_124.mp3",
-      "introSec": 3.85,
+      "introSec": 3.9,
       "outroSec": 3.5
     },
     {
@@ -893,7 +893,7 @@
       "id": 128,
       "title": "Lap_128",
       "file": "Lap-set/Lap_128.mp3",
-      "introSec": 7.800000000000001,
+      "introSec": 7.8,
       "outroSec": 3.5
     },
     {
@@ -914,7 +914,7 @@
       "id": 131,
       "title": "Lap_131",
       "file": "Lap-set/Lap_131.mp3",
-      "introSec": 4.75,
+      "introSec": 4.8,
       "outroSec": 3.5
     },
     {
@@ -928,7 +928,7 @@
       "id": 133,
       "title": "Lap_133",
       "file": "Lap-set/Lap_133.mp3",
-      "introSec": 4.15,
+      "introSec": 4.2,
       "outroSec": 3.5
     },
     {
@@ -949,7 +949,7 @@
       "id": 136,
       "title": "Lap_136",
       "file": "Lap-set/Lap_136.mp3",
-      "introSec": 7.45,
+      "introSec": 7.5,
       "outroSec": 3.5
     },
     {
@@ -970,7 +970,7 @@
       "id": 139,
       "title": "Lap_139",
       "file": "Lap-set/Lap_139.mp3",
-      "introSec": 6.6000000000000005,
+      "introSec": 6.6,
       "outroSec": 3.5
     },
     {
@@ -991,7 +991,7 @@
       "id": 142,
       "title": "Lap_142",
       "file": "Lap-set/Lap_142.mp3",
-      "introSec": 6.8075,
+      "introSec": 6.8,
       "outroSec": 3.5
     },
     {
@@ -1005,7 +1005,7 @@
       "id": 144,
       "title": "Lap_144",
       "file": "Lap-set/Lap_144.mp3",
-      "introSec": 11.450000000000001,
+      "introSec": 11.5,
       "outroSec": 3.5
     },
     {
@@ -1026,7 +1026,7 @@
       "id": 147,
       "title": "Lap_147",
       "file": "Lap-set/Lap_147.mp3",
-      "introSec": 10.25,
+      "introSec": 10.3,
       "outroSec": 3.5
     },
     {
@@ -1041,7 +1041,7 @@
       "title": "Lap_149",
       "file": "Lap-set/Lap_149.mp3",
       "introSec": 3.5,
-      "outroSec": 9.89143137732485
+      "outroSec": 9.9
     },
     {
       "id": 150,

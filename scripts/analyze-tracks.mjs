@@ -61,8 +61,8 @@ async function main() {
       id,
       title: `Lap_${id}`,
       file: `Lap-set/Lap_${id}.mp3`,
-      introSec,
-      outroSec,
+      introSec: Math.round(introSec * 10) / 10,
+      outroSec: Math.round(outroSec * 10) / 10,
     });
   }
 
