@@ -1,4 +1,4 @@
-# Netlify only hosts the thin GitHub/CDN loader — not Lap-set MP3s.
+# Thin Netlify shell only — site + MP3s load from GitHub/CDN.
 [build]
-  command = "mkdir -p publish && cp 'index_voor netlify.html' publish/index.html"
+  command = "mkdir -p publish && cp netlify-index.html publish/index.html"
   publish = "publish"
