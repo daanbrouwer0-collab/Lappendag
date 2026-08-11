@@ -143,9 +143,12 @@
             const anchor = event.target.closest("a");
             if (!anchor) return;
 
+            // Let native download / file links through (now-playing download button).
+            if (anchor.hasAttribute("download")) return;
             const href = anchor.getAttribute("href");
             if (!href || href.startsWith("#")) return;
             if (/^(mailto:|tel:|javascript:)/i.test(href)) return;
+            if (/\.mp3(\?|#|$)/i.test(href)) return;
 
             const absolute = /^(https?:)?\/\//i.test(href);
             if (absolute) {

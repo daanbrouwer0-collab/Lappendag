@@ -439,6 +439,32 @@ function updateNowPlayingDownloadBtn() {
   nowPlayingDownloadBtn.setAttribute('aria-label', `Download ${track.title}`);
 }
 
+async function downloadCurrentTrack(event) {
+  if (event) event.preventDefault();
+  const track = tracks[currentIndex];
+  if (!track || !deckHasTrackSrc()) return;
+
+  const name = trackDownloadName(track);
+  try {
+    const res = await fetch(track.file, { cache: 'force-cache' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  } catch (err) {
+    console.error('Download failed:', err);
+    // Last resort: open the file URL (may play in a tab on some hosts).
+    window.open(track.file, '_blank', 'noopener');
+  }
+}
+
 function toggleMyList(name) {
   const key = trackKey(name);
   if (isInMyList(name)) {
@@ -533,6 +559,7 @@ async function initPlayer() {
     const track = tracks[currentIndex];
     if (track) toggleMyList(track.title);
   });
+  nowPlayingDownloadBtn?.addEventListener('click', downloadCurrentTrack);
 
   [audioA, audioB].forEach((el) => {
     el.addEventListener('timeupdate', onAudioTimeUpdate);
