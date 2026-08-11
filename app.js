@@ -1645,6 +1645,10 @@ function initLocationModal() {
   if (!locationBtn || !locationModal) return;
 
   const openLocation = () => {
+    const map = document.getElementById('locationMap');
+    if (map && !map.getAttribute('src') && map.dataset.src) {
+      map.src = map.dataset.src;
+    }
     locationModal.hidden = false;
     locationBtn.setAttribute('aria-expanded', 'true');
     locationClose?.focus();

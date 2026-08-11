@@ -38,7 +38,7 @@
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
-      <img class="location-map" src="locatie.png" alt="Kaart: Uit het water en uit je bol, Buitenhaven Hoorn">
+      <img class="location-map" id="locationMap" data-src="locatie.png" alt="Kaart: Uit het water en uit je bol, Buitenhaven Hoorn">
     </div>
   </div>
 
@@ -80,7 +80,7 @@
           <div class="now-playing-art" id="nowPlayingArt" aria-hidden="true"></div>
           <div class="track-info-text">
             <div class="current-title-row">
-              <h2 class="current-title" id="currentTitle">Laden...</h2>
+              <h2 class="current-title" id="currentTitle">Druk play</h2>
               <button type="button" class="list-toggle-btn now-playing-list-btn" id="nowPlayingListBtn" title="Naar My list" aria-label="Naar My list" hidden>
                 <i class="fa-solid fa-plus" id="nowPlayingListIcon"></i>
               </button>
@@ -181,8 +181,8 @@
   </div>
 
   <!-- Dual audio decks for Mix crossfade -->
-  <audio id="audioPlayer" preload="auto"></audio>
-  <audio id="audioPlayerB" preload="auto"></audio>
+  <audio id="audioPlayer" preload="none"></audio>
+  <audio id="audioPlayerB" preload="none"></audio>
 
   <script src="app.js"></script>
 </body>
