@@ -1,0 +1,4 @@
+# Netlify only hosts the thin GitHub/CDN loader — not Lap-set MP3s.
+[build]
+  command = "mkdir -p publish && cp 'index_voor netlify.html' publish/index.html"
+  publish = "publish"
