@@ -22,9 +22,12 @@ let autoMixPreparing = null;
 let plannedNextIndex = -1;
 let isMixing = false;
 let pendingMixIndex = -1;
-let mixRaf = null;
 let mixBlendT = 0;
 let mixStartOutPercent = 0;
+/** Outgoing audio.currentTime when the mix fade started. */
+let mixAudioT0 = 0;
+/** Mix fade length in seconds (audio-clock, not rAF). */
+let mixDurationSec = 0;
 
 function easeMix(t) {
   const x = Math.min(1, Math.max(0, t));
@@ -196,15 +199,13 @@ function clearDeck(el) {
 }
 
 function cancelMix() {
-  if (mixRaf != null) {
-    cancelAnimationFrame(mixRaf);
-    mixRaf = null;
-  }
   isMixing = false;
   pendingMixIndex = -1;
   plannedNextIndex = -1;
   mixBlendT = 0;
   mixStartOutPercent = 0;
+  mixAudioT0 = 0;
+  mixDurationSec = 0;
   clearDeck(audioIncoming);
   if (!audio.muted) {
     audio.volume = masterVolume();
@@ -585,6 +586,7 @@ async function initPlayer() {
   window.addEventListener('resize', () => {
     if (!isSeeking) updateProgress();
   });
+  document.addEventListener('visibilitychange', onVisibilityChange);
 
   currentTitle.textContent = IDLE_TITLE;
   updateNowPlayingListBtn();
@@ -815,11 +817,16 @@ function effectiveMixSeconds(duration, preferredSec) {
 }
 
 function onAudioTimeUpdate(e) {
-  if (e.target !== audio) return;
-  // During mix the rAF loop owns the scrubber — dual updates caused jitter.
-  if (!isMixing) {
-    updateProgress();
+  // During mix, both decks may emit timeupdate — tick from either.
+  if (isMixing) {
+    if (e.target === audio || e.target === audioIncoming) {
+      tickMix();
+    }
+    return;
   }
+  if (e.target !== audio) return;
+
+  updateProgress();
   if (isPlaying && mediaHasHealthyBuffer()) {
     ensureNextBuffered();
   }
@@ -857,6 +864,29 @@ function maybeStartMix() {
   startMix(liveSec);
 }
 
+function tickMix() {
+  if (!isMixing || pendingMixIndex < 0) return;
+  if (!mixDurationSec || mixDurationSec <= 0) {
+    finishMix(pendingMixIndex);
+    return;
+  }
+
+  const elapsed = Math.max(0, audio.currentTime - mixAudioT0);
+  const rawT = Math.min(1, elapsed / mixDurationSec);
+  const t = easeMix(rawT);
+  mixBlendT = t;
+  const m = masterVolume();
+  if (!audio.muted) {
+    audio.volume = m * (1 - t);
+    audioIncoming.volume = m * t;
+  }
+  updateProgress();
+
+  if (rawT >= 1) {
+    finishMix(pendingMixIndex);
+  }
+}
+
 function startMix(mixSec) {
   const nextIndex = planNextIndex();
   if (nextIndex < 0 || nextIndex === currentIndex) return;
@@ -865,38 +895,24 @@ function startMix(mixSec) {
   pendingMixIndex = nextIndex;
   const nextTrack = tracks[nextIndex];
 
-  audioIncoming.src = nextTrack.file;
+  // Prefer already-buffered next; only set src if needed.
+  if (!incomingAlreadyHas(nextTrack.file)) {
+    audioIncoming.src = nextTrack.file;
+  }
   audioIncoming.playbackRate = 1;
   audioIncoming.muted = audio.muted;
   audioIncoming.volume = 0;
 
   audioIncoming.play().then(() => {
+    if (!isMixing || pendingMixIndex !== nextIndex) return;
+    mixAudioT0 = audio.currentTime;
+    mixDurationSec = mixSec;
     mixStartOutPercent = audio.duration
       ? (audio.currentTime / audio.duration) * 100
       : 0;
     mixBlendT = 0;
     setMixProgressUi(true);
-    const t0 = performance.now();
-    const durationMs = mixSec * 1000;
-
-    const frame = (now) => {
-      if (!isMixing) return;
-      const rawT = Math.min(1, (now - t0) / durationMs);
-      const t = easeMix(rawT);
-      mixBlendT = t;
-      const m = masterVolume();
-      if (!audio.muted) {
-        audio.volume = m * (1 - t);
-        audioIncoming.volume = m * t;
-      }
-      updateProgress();
-      if (rawT < 1) {
-        mixRaf = requestAnimationFrame(frame);
-      } else {
-        finishMix(nextIndex);
-      }
-    };
-    mixRaf = requestAnimationFrame(frame);
+    tickMix();
   }).catch((err) => {
     console.error('Mix start failed:', err);
     cancelMix();
@@ -904,11 +920,6 @@ function startMix(mixSec) {
 }
 
 function finishMix(nextIndex) {
-  if (mixRaf != null) {
-    cancelAnimationFrame(mixRaf);
-    mixRaf = null;
-  }
-
   const outgoing = audio;
   outgoing.pause();
   clearDeck(outgoing);
@@ -937,6 +948,8 @@ function finishMix(nextIndex) {
   plannedNextIndex = -1;
   mixBlendT = 0;
   mixStartOutPercent = 0;
+  mixAudioT0 = 0;
+  mixDurationSec = 0;
 
   const handoffPercent = audio.duration
     ? (audio.currentTime / audio.duration) * 100
@@ -959,6 +972,15 @@ function finishMix(nextIndex) {
     scheduleAutoMixPrepare();
   }
   updateMixDurationUi();
+}
+
+function onVisibilityChange() {
+  // Screen lock / background: snap any in-progress mix so the incoming
+  // track becomes the active deck (audio keeps playing without rAF).
+  if (document.visibilityState !== 'hidden') return;
+  if (isMixing && pendingMixIndex >= 0) {
+    finishMix(pendingMixIndex);
+  }
 }
 
 function renderPlaylist() {
