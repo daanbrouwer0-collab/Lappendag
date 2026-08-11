@@ -1,6 +1,10 @@
-# Let op: de echte Netlify-deploy map is `netlify-deploy/`
-# (alleen loader, geen build, spaart free credits).
-# Deze root-toml voorkomt per ongeluk de hele repo + Lap-set te publishen.
+# GitHub-pushes mogen GEEN Netlify-build starten (spaart free credits).
+# De live site laadt code/mp3's via CDN vanaf GitHub.
+# Loader zelf: één keer handmatig alleen de map `netlify-deploy/` uploaden.
 [build]
+  ignore = "exit 0"
   command = "mkdir -p publish && cp netlify-index.html publish/index.html"
   publish = "publish"
+
+[build.processing]
+  skip_processing = true

@@ -1,8 +1,9 @@
-# Alleen deze map deployen (drag & drop of publish dir = netlify-deploy).
-# Geen build, geen asset-optimalisatie — spaart tijd en credits.
+# Handmatige drag&drop van DEZE map naar Netlify (één keer).
+# Daarna: wijzigingen alleen op GitHub pushen — géén nieuwe Netlify-deploy nodig.
 [build]
   publish = "."
   command = "true"
+  ignore = "exit 0"
 
 [build.processing]
   skip_processing = true
