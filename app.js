@@ -59,6 +59,7 @@ const nextTitle = document.getElementById('nextTitle');
 const nowPlayingArt = document.getElementById('nowPlayingArt');
 const nowPlayingListBtn = document.getElementById('nowPlayingListBtn');
 const nowPlayingListIcon = document.getElementById('nowPlayingListIcon');
+const nowPlayingDownloadBtn = document.getElementById('nowPlayingDownloadBtn');
 const playlistEl = document.getElementById('playlist');
 const coverArtCache = new Map(); // file url -> objectURL | null
 const disc = document.getElementById('disc');
@@ -400,6 +401,7 @@ function updateNowPlayingListBtn() {
   const track = tracks[currentIndex];
   if (!track || !deckHasTrackSrc()) {
     nowPlayingListBtn.hidden = true;
+    updateNowPlayingDownloadBtn();
     return;
   }
 
@@ -409,6 +411,32 @@ function updateNowPlayingListBtn() {
   nowPlayingListBtn.title = inList ? 'Uit My list' : 'Naar My list';
   nowPlayingListBtn.setAttribute('aria-label', inList ? 'Uit My list' : 'Naar My list');
   nowPlayingListIcon.className = `fa-solid ${inList ? 'fa-minus' : 'fa-plus'}`;
+  updateNowPlayingDownloadBtn();
+}
+
+function trackDownloadName(track) {
+  const fromFile = String(track?.file || '').split('/').pop();
+  if (fromFile && /\.mp3$/i.test(fromFile)) return fromFile;
+  const title = String(track?.title || 'track').replace(/[^\w.-]+/g, '_');
+  return `${title}.mp3`;
+}
+
+function updateNowPlayingDownloadBtn() {
+  if (!nowPlayingDownloadBtn) return;
+  const track = tracks[currentIndex];
+  if (!track || !deckHasTrackSrc()) {
+    nowPlayingDownloadBtn.hidden = true;
+    nowPlayingDownloadBtn.removeAttribute('href');
+    nowPlayingDownloadBtn.removeAttribute('download');
+    return;
+  }
+
+  const name = trackDownloadName(track);
+  nowPlayingDownloadBtn.hidden = false;
+  nowPlayingDownloadBtn.href = track.file;
+  nowPlayingDownloadBtn.setAttribute('download', name);
+  nowPlayingDownloadBtn.title = `Download ${track.title}`;
+  nowPlayingDownloadBtn.setAttribute('aria-label', `Download ${track.title}`);
 }
 
 function toggleMyList(name) {

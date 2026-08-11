@@ -455,6 +455,18 @@ body {
   display: none;
 }
 
+.now-playing-download-btn {
+  width: 32px;
+  height: 32px;
+  font-size: 0.85rem;
+  background: rgba(8, 8, 12, 0.45);
+  text-decoration: none;
+}
+
+.now-playing-download-btn[hidden] {
+  display: none;
+}
+
 .next-title {
   margin: 0.2rem 0 0;
   padding: 0;
