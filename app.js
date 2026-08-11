@@ -474,8 +474,14 @@ function reorderMyList(fromIndex, toIndex) {
   myListNames.splice(toIndex, 0, moved);
   saveMyList();
   plannedNextIndex = -1;
+  autoMixSec = null;
+  autoMixKey = null;
+  clearIncomingIfIdle();
   renderPlaylist();
   updateNextTitle();
+  if (mixOn) {
+    scheduleAutoMixPrepare();
+  }
 }
 
 function indexInVisible(visible, globalIndex) {
@@ -556,6 +562,7 @@ function setTab(tab) {
   autoMixSec = null;
   autoMixKey = null;
   autoMixPreparing = null;
+  clearIncomingIfIdle();
   renderPlaylist();
   updateNextTitle();
   if (mixOn) {
@@ -580,6 +587,7 @@ function toggleShuffle() {
   autoMixSec = null;
   autoMixKey = null;
   autoMixPreparing = null;
+  clearIncomingIfIdle();
   updateNextTitle();
   if (mixOn) {
     scheduleAutoMixPrepare();
@@ -652,8 +660,31 @@ function computeAutoMixSecFromTracks(current, next, trackDuration) {
   return Math.round(sec * 10) / 10;
 }
 
+function incomingAlreadyHas(file) {
+  const src = audioIncoming.currentSrc || audioIncoming.getAttribute('src') || '';
+  if (!src || src.startsWith('data:')) return false;
+  return src.includes(file) || src.endsWith(file);
+}
+
 function ensureNextBuffered() {
-  // Filled in Task 7 — warm incoming deck after healthy buffer.
+  if (!tracks.length || isMixing) return;
+  if (!isPlaying || !deckHasTrackSrc()) return;
+  if (!mediaHasHealthyBuffer()) return;
+  const nextIndex = planNextIndex();
+  if (nextIndex < 0 || nextIndex === currentIndex) return;
+  const next = tracks[nextIndex];
+  if (!next) return;
+  if (incomingAlreadyHas(next.file)) return;
+
+  audioIncoming.src = next.file;
+  audioIncoming.playbackRate = 1;
+  audioIncoming.volume = 0;
+  // Do not play until startMix / explicit navigation
+}
+
+function clearIncomingIfIdle() {
+  if (isMixing) return;
+  clearDeck(audioIncoming);
 }
 
 function scheduleAutoMixPrepare() {
@@ -731,9 +762,11 @@ function onAudioTimeUpdate(e) {
   if (!isMixing) {
     updateProgress();
   }
+  if (isPlaying && mediaHasHealthyBuffer()) {
+    ensureNextBuffered();
+  }
   if (mixOn && audio.duration) {
     const remaining = audio.duration - audio.currentTime;
-    // Start analysis once the player can seek; near the end insist on prepare.
     if (remaining <= 60) {
       if (remaining <= 20 && mediaCanSeek()) {
         prepareAutoMix();
