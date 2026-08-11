@@ -1,4 +1,6 @@
-# Thin Netlify shell only — site + MP3s load from GitHub/CDN.
+# Let op: de echte Netlify-deploy map is `netlify-deploy/`
+# (alleen loader, geen build, spaart free credits).
+# Deze root-toml voorkomt per ongeluk de hele repo + Lap-set te publishen.
 [build]
   command = "mkdir -p publish && cp netlify-index.html publish/index.html"
   publish = "publish"

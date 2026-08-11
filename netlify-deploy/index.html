@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lappendag</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        height: 100dvh;
+        background: #07070a;
+      }
+      #site-frame {
+        display: block;
+        width: 100%;
+        height: 100%;
+        height: 100dvh;
+        border: 0;
+      }
+      #site-loading {
+        position: fixed;
+        inset: 0;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #07070a;
+        color: #f3f4f6;
+        font-family: system-ui, sans-serif;
+        font-size: 1rem;
+        letter-spacing: 0.02em;
+      }
+      #site-loading[hidden] {
+        display: none;
+      }
+      #site-error {
+        font-family: system-ui, sans-serif;
+        padding: 2rem;
+        color: #f3f4f6;
+        max-width: 28rem;
+        line-height: 1.45;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="site-loading">Site laden…</div>
+    <iframe id="site-frame" title="Lappendag"></iframe>
+    <script>
+      (async function loadLappendag() {
+        const repo = "daanbrouwer0-collab/Lappendag";
+        const SHA_KEY = "lappendag-cdn-sha";
+        const loading = document.getElementById("site-loading");
+        const frame = document.getElementById("site-frame");
+
+        let version = "main";
+        try {
+          const cached = localStorage.getItem(SHA_KEY);
+          // Only trust full commit SHAs; ignore stale short / invalid values.
+          if (cached && /^[0-9a-f]{40}$/i.test(cached)) {
+            version = cached;
+          } else if (cached) {
+            localStorage.removeItem(SHA_KEY);
+          }
+        } catch (_) {
+          // localStorage unavailable
+        }
+
+        let base = "";
+        let overlayHidden = false;
+        let shaReloadDone = false;
+        let currentPath = "index.html";
+
+        function hideOverlay() {
+          if (overlayHidden) return;
+          overlayHidden = true;
+          if (loading) loading.hidden = true;
+        }
+
+        function showError(detail) {
+          hideOverlay();
+          const msg = detail
+            ? `Kon de Lappendag-site niet laden vanaf GitHub.<br><small>${detail}</small>`
+            : "Kon de Lappendag-site niet laden vanaf GitHub.";
+          document.body.innerHTML = `<p id="site-error">${msg}</p>`;
+        }
+
+        function setVersion(next) {
+          version = next;
+          try {
+            if (/^[0-9a-f]{40}$/i.test(next)) {
+              localStorage.setItem(SHA_KEY, next);
+            }
+          } catch (_) {
+            // ignore quota / private mode
+          }
+        }
+
+        function clearCachedVersion() {
+          version = "main";
+          try {
+            localStorage.removeItem(SHA_KEY);
+          } catch (_) {}
+        }
+
+        /** Candidate CDN bases — first success wins. */
+        function candidateBases(ver) {
+          const list = [];
+          if (ver && ver !== "main") {
+            list.push(`https://cdn.jsdelivr.net/gh/${repo}@${ver}`);
+          }
+          list.push(`https://cdn.jsdelivr.net/gh/${repo}@main`);
+          // Fallback when jsDelivr cannot materialize the large repo package.
+          list.push(`https://raw.githubusercontent.com/${repo}/${ver && ver !== "main" ? ver : "main"}`);
+          list.push(`https://raw.githubusercontent.com/${repo}/main`);
+          return [...new Set(list)];
+        }
+
+        async function fetchPage(path) {
+          const bases = candidateBases(version);
+          let lastErr = null;
+          for (const tryBase of bases) {
+            try {
+              const res = await fetch(`${tryBase}/${path}`, { cache: "no-cache" });
+              if (!res.ok) {
+                lastErr = `${res.status} @ ${tryBase}`;
+                continue;
+              }
+              const html = await res.text();
+              if (!html || !/<html/i.test(html)) {
+                lastErr = `ongeldige HTML @ ${tryBase}`;
+                continue;
+              }
+              base = tryBase.endsWith("/") ? tryBase.slice(0, -1) : tryBase;
+              // raw.githubusercontent needs a trailing path style for <base href>
+              return html;
+            } catch (err) {
+              lastErr = String(err && err.message ? err.message : err);
+            }
+          }
+          throw new Error(lastErr || "geen CDN bereikbaar");
+        }
+
+        function refreshShaAndMaybeReload() {
+          fetch(`https://api.github.com/repos/${repo}/commits/main?per_page=1`)
+            .then((res) => (res.ok ? res.json() : null))
+            .then((data) => {
+              if (!data || !data.sha) return;
+              if (data.sha === version) {
+                setVersion(data.sha);
+                return;
+              }
+              if (shaReloadDone) {
+                setVersion(data.sha);
+                return;
+              }
+              shaReloadDone = true;
+              if (loading) {
+                loading.hidden = false;
+                overlayHidden = false;
+              }
+              setVersion(data.sha);
+              show(currentPath).catch((err) => {
+                clearCachedVersion();
+                show(currentPath).catch(() => showError(String(err && err.message ? err.message : err)));
+              });
+            })
+            .catch(() => {
+              // keep cached / main
+            });
+        }
+
+        function normalizePath(path) {
+          let p = (path || "index.html").replace(/^\/+/, "");
+          if (!p || p.endsWith("/")) p += "index.html";
+          return p;
+        }
+
+        function rewriteAssetUrls(html, pagePath) {
+          const pageDir = pagePath.includes("/")
+            ? pagePath.slice(0, pagePath.lastIndexOf("/") + 1)
+            : "";
+          const pageBase = `${base}/${pageDir}`;
+
+          if (!/<base\s/i.test(html)) {
+            html = html.replace(
+              /<head([^>]*)>/i,
+              `<head$1><base href="${pageBase}">`
+            );
+          }
+          return html;
+        }
+
+        function wireNavigation(doc) {
+          doc.addEventListener("click", (event) => {
+            const anchor = event.target.closest("a");
+            if (!anchor) return;
+
+            // Let native download / file links through (now-playing download button).
+            if (anchor.hasAttribute("download")) return;
+            const href = anchor.getAttribute("href");
+            if (!href || href.startsWith("#")) return;
+            if (/^(mailto:|tel:|javascript:)/i.test(href)) return;
+            if (/\.mp3(\?|#|$)/i.test(href)) return;
+
+            const absolute = /^(https?:)?\/\//i.test(href);
+            if (absolute) {
+              return;
+            }
+
+            event.preventDefault();
+            const current = normalizePath(
+              (location.hash || "#index.html").slice(1)
+            );
+            const currentDir = current.includes("/")
+              ? current.slice(0, current.lastIndexOf("/") + 1)
+              : "";
+            const resolved = new URL(href, `https://local.invalid/${currentDir}`);
+            const nextPath = normalizePath(resolved.pathname.replace(/^\//, ""));
+            history.pushState({ path: nextPath }, "", `#${nextPath}`);
+            show(nextPath);
+          });
+        }
+
+        async function show(path) {
+          currentPath = normalizePath(path);
+          const pagePath = currentPath;
+          const htmlRaw = await fetchPage(pagePath);
+          const html = rewriteAssetUrls(htmlRaw, pagePath);
+          frame.onload = () => {
+            hideOverlay();
+            try {
+              const doc = frame.contentDocument;
+              if (!doc) return;
+              wireNavigation(doc);
+              const title = doc.querySelector("title");
+              if (title && title.textContent) {
+                document.title = title.textContent;
+              }
+            } catch (_) {
+              // negeer als iframe niet bereikbaar is
+            }
+          };
+          frame.srcdoc = html;
+        }
+
+        refreshShaAndMaybeReload();
+
+        const initial = normalizePath(
+          (location.hash || "#index.html").slice(1)
+        );
+        history.replaceState({ path: initial }, "", `#${initial}`);
+        try {
+          await show(initial);
+        } catch (err) {
+          clearCachedVersion();
+          try {
+            await show(initial);
+          } catch (err2) {
+            showError(String(err2 && err2.message ? err2.message : err2));
+            return;
+          }
+        }
+
+        window.addEventListener("popstate", (event) => {
+          const path =
+            (event.state && event.state.path) ||
+            normalizePath((location.hash || "#index.html").slice(1));
+          show(path).catch((err) => showError(String(err && err.message ? err.message : err)));
+        });
+      })().catch((err) => {
+        const loading = document.getElementById("site-loading");
+        if (loading) loading.hidden = true;
+        document.body.innerHTML =
+          `<p id="site-error">Kon de Lappendag-site niet laden vanaf GitHub.<br><small>${
+            err && err.message ? err.message : err
+          }</small></p>`;
+      });
+    </script>
+  </body>
+</html>

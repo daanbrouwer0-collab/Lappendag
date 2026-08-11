@@ -1,0 +1,4 @@
+# Geen build-commando. Deze map zo naar Netlify deployen (drag & drop of CLI).
+# Alleen de loader; muziek/site laden vanaf GitHub/CDN.
+[build]
+  publish = "."
