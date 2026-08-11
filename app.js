@@ -52,6 +52,9 @@ const progressFill = document.getElementById('progressFill');
 const progressFillIncoming = document.getElementById('progressFillIncoming');
 const sliderWrapper = document.getElementById('sliderWrapper');
 const incomingLane = document.getElementById('incomingLane');
+const mixThumbs = document.getElementById('mixThumbs');
+const mixThumbOut = document.getElementById('mixThumbOut');
+const mixThumbIn = document.getElementById('mixThumbIn');
 const currentTimeEl = document.getElementById('currentTime');
 const durationEl = document.getElementById('duration');
 const currentTitle = document.getElementById('currentTitle');
@@ -935,17 +938,16 @@ function finishMix(nextIndex) {
   mixBlendT = 0;
   mixStartOutPercent = 0;
 
-  // Hand off without a flash: main fill matches new track + thumb mapping.
   const handoffPercent = audio.duration
     ? (audio.currentTime / audio.duration) * 100
     : 0;
+  setMixProgressUi(false);
   setRangeAndFill(handoffPercent);
   if (progressFill) progressFill.style.opacity = '1';
   if (progressFillIncoming) {
-    progressFillIncoming.style.opacity = '0';
-    progressFillIncoming.style.width = `${fillWidthFromRangeValue(handoffPercent)}%`;
+    progressFillIncoming.style.opacity = '1';
+    progressFillIncoming.style.width = '0%';
   }
-  setMixProgressUi(false);
 
   updateProgress();
   if (audio.duration) {
@@ -1264,9 +1266,19 @@ function setMixProgressUi(on) {
   if (incomingLane) {
     incomingLane.hidden = !on;
   }
-  if (!on && progressFillIncoming) {
-    // Keep width; only fade — resetting to 0% caused a visible flash.
-    progressFillIncoming.style.opacity = '0';
+  if (mixThumbs) {
+    mixThumbs.hidden = !on;
+  }
+  if (progressBar) {
+    progressBar.disabled = on;
+    progressBar.setAttribute('aria-disabled', on ? 'true' : 'false');
+  }
+  if (!on) {
+    if (progressFillIncoming) {
+      progressFillIncoming.style.width = '0%';
+    }
+    if (mixThumbOut) mixThumbOut.style.left = '0%';
+    if (mixThumbIn) mixThumbIn.style.left = '0%';
   }
 }
 
@@ -1290,6 +1302,11 @@ function fillWidthFromRangeValue(value) {
   return (centerX / trackW) * 100;
 }
 
+function setThumbLeft(el, valuePercent) {
+  if (!el) return;
+  el.style.left = `${fillWidthFromRangeValue(valuePercent)}%`;
+}
+
 function setRangeAndFill(valuePercent, fillEl = progressFill) {
   const v = Math.max(0, Math.min(100, Number(valuePercent) || 0));
   if (fillEl === progressFill) {
@@ -1300,37 +1317,33 @@ function setRangeAndFill(valuePercent, fillEl = progressFill) {
   }
 }
 
+function trackPercent(el) {
+  if (!el || !el.duration || !Number.isFinite(el.duration) || el.duration <= 0) {
+    return 0;
+  }
+  return (el.currentTime / el.duration) * 100;
+}
+
 function updateProgress() {
   if (isSeeking) return;
 
-  if (isMixing && progressFillIncoming) {
+  if (isMixing) {
     setMixProgressUi(true);
-    const t = mixBlendT;
-    let outP = mixStartOutPercent;
-    if (audio.duration && Number.isFinite(audio.duration) && audio.duration > 0) {
-      outP = (audio.currentTime / audio.duration) * 100;
-    }
-    let inP = 0;
-    if (
-      audioIncoming.duration
-      && Number.isFinite(audioIncoming.duration)
-      && audioIncoming.duration > 0
-    ) {
-      inP = (audioIncoming.currentTime / audioIncoming.duration) * 100;
-    }
-    // Stay on the outgoing playhead for most of the mix, then ease into the
-    // incoming position in the last quarter — smooth handoff, no hard jump.
-    const settle = t <= 0.75 ? 0 : (t - 0.75) / 0.25;
-    const scrubT = easeMix(settle);
-    const scrubP = outP * (1 - scrubT) + inP * scrubT;
-    const pinkPeak = Math.sin(t * Math.PI);
-    progressBar.value = scrubP;
+    const outP = trackPercent(audio);
+    const inP = trackPercent(audioIncoming);
+
     if (progressFill) {
-      progressFill.style.width = `${fillWidthFromRangeValue(scrubP)}%`;
-      progressFill.style.opacity = String(1 - 0.25 * scrubT);
+      progressFill.style.width = `${fillWidthFromRangeValue(outP)}%`;
+      progressFill.style.opacity = '1';
     }
-    progressFillIncoming.style.width = `${fillWidthFromRangeValue(inP)}%`;
-    progressFillIncoming.style.opacity = String(pinkPeak);
+    if (progressFillIncoming) {
+      progressFillIncoming.style.width = `${fillWidthFromRangeValue(inP)}%`;
+      progressFillIncoming.style.opacity = '1';
+    }
+    setThumbLeft(mixThumbOut, outP);
+    setThumbLeft(mixThumbIn, inP);
+    // Keep range value on outgoing for when mix ends (no visual thumb).
+    progressBar.value = outP;
     if (audio.duration) {
       currentTimeEl.textContent = formatTime(audio.currentTime);
     }
@@ -1344,11 +1357,12 @@ function updateProgress() {
     currentTimeEl.textContent = formatTime(audio.currentTime);
   }
   if (progressFillIncoming) {
-    progressFillIncoming.style.opacity = '0';
+    progressFillIncoming.style.width = '0%';
   }
 }
 
 function onScrubberInput(e) {
+  if (isMixing) return;
   isSeeking = true;
   const percent = e.target.value;
   if (progressFill) {
@@ -1360,13 +1374,10 @@ function onScrubberInput(e) {
 }
 
 function seekToPercent(percent) {
+  if (isMixing) return;
   if (!audio.duration || Number.isNaN(audio.duration)) {
     isSeeking = false;
     return;
-  }
-
-  if (isMixing) {
-    cancelMix();
   }
 
   const value = Number(percent);
